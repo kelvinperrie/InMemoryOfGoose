@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>fighters go pewpew</title>
+    <meta charset="utf-8"/>
+    <style type="text/css">
+        body {
+            font-family: "Fira", Helvetica, Arial, sans-serif;
+            margin: 0;
+            text-align: center;
+            color: #6b6b6b;
+        }
+        canvas {
+            border: 1px solid #d0d0d0;
+            background-color: #fff;
+        }
+        .everything {
+            margin: auto;
+        }
+    </style>
+</head>
+<body onload="">
+    <div class="everything">
+
+        <canvas id="canvas" width="400" height="400"></canvas>
+
+    </div>
+    <script src="jquery-3.3.1.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        $(function(){
+            $('html').keydown(function(e){
+                //model.processInput(e.which);
+            });
+        });
+
+        $(document).ready(function () {
+            drawLoop();
+        });
+
+        function randomIntFromInterval(min,max)
+        {
+            return Math.floor(Math.random()*(max-min+1)+min);
+        }
+
+        function angle(cx, cy, ex, ey) {
+            var dy = ey - cy;
+            var dx = ex - cx;
+            var theta = Math.atan2(dy, dx); // range (-PI, PI]
+            theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+            //if (theta < 0) theta = 360 + theta; // range [0, 360)
+            return theta;
+        }
+
+        var worldModel = function() {
+            var self = this;
+            self.flyingObjects = [];
+
+            self.flyingObjects.push(new flyingObjectModel({
+                currentTarget : { x : 100, y : 100 },
+                currentLocation: { x: 200, y: 200 },
+                imageSource : 'arrow1.png'
+            }));
+
+            self.draw = function(ctx) {
+                for(var i=0;i< self.flyingObjects.length;i++) {
+                    self.flyingObjects[i].draw(ctx);
+                }
+            };
+
+            self.move = function() {
+                for(var i=0;i< self.flyingObjects.length;i++) {
+                    self.flyingObjects[i].move();
+                }
+                setTimeout(function () { self.move(); }, 100);
+            }
+            self.move();
+        };
+
+        var flyingObjectModel = function(settings) {
+            var self = this;
+            self.targetOffset = 2;
+            self.targetSize = 4;
+            self.radius = 10;
+            self.currentAngle = 0;
+            self.currentSpeed = 20;
+            self.turnIteration = 5;
+            self.currentTarget = { x : settings.currentTarget.x, y : settings.currentTarget.y };
+            self.currentLocation = { x : settings.currentLocation.x, y : settings.currentLocation.y };
+            self.image = new Image();
+            self.image.src = settings.imageSource;
+
+            self.draw = function(ctx) {
+                ctx.save();
+                // todo rotate as appropriate
+                //ctx.drawImage(self.image, self.currentLocation.x, self.currentLocation.y);
+
+                ctx.translate(self.currentLocation.x, self.currentLocation.y);
+                ctx.rotate(self.currentAngle * Math.PI / 180);
+                ctx.drawImage(self.image,-1*self.radius,-1*self.radius);
+
+                ctx.restore();
+                self.drawMyTarget(ctx);
+            };
+            self.drawMyTarget = function (ctx) {
+                ctx.save();
+
+                ctx.translate(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset);
+                ctx.rect(0, 0, self.targetSize, self.targetSize);
+                ctx.fill();
+
+                ctx.restore();
+            }
+            self.move = function() {
+                // if we need to turn, do it before moving forwards
+                self.turn();
+                // move forwards in the direction we are facing
+                var angleInRads = self.currentAngle * (Math.PI / 180);
+                var distance = self.currentSpeed / 10; // todo what should this be?
+                // what is the adjacent (X)
+                var adjacent = Math.cos(angleInRads) * distance;
+                // what is the opposite (Y)
+                var opposite = Math.sin(angleInRads) * distance;
+                self.currentLocation.x = self.currentLocation.x + adjacent;
+                self.currentLocation.y = self.currentLocation.y + opposite;
+            }
+            self.turn = function() {
+                // workout the angle to our target
+                var angleToTarget = angle(self.currentLocation.x, self.currentLocation.y, self.currentTarget.x, self.currentTarget.y);
+                console.log("angle to target is " + angleToTarget + ", current angle is " + self.currentAngle);
+                // if the angle to the target is not the same as our current angle then adjust the current angle
+                if (angleToTarget != self.currentAngle) {
+                    // angleToTarget ranges from -180 to 180. 0 is to the right, -90 is straight up, 90 is straight down.
+                    var newAngle;
+                    // if the turn iteration is larger than difference in angles then just put us on the target angle
+                    if (self.turnIteration > Math.abs(angleToTarget - self.currentAngle)) { // Math.abs(lol)
+                        console.log("zapping to target angle");
+                        self.currentAngle = angleToTarget;
+                        return;
+                    }
+
+                    // this needs to take into account the direction we are facing and the direction to the target
+                    // todo, think about the direction we're facing
+                    // todo UPDATE ME!
+                    if (angleToTarget < 0) {
+                        // turn counter clock wise
+                        newAngle = self.currentAngle - self.turnIteration;
+                        console.log("going CCW");
+                        if (newAngle < -180) {
+                            console.log("angle past -180; flipping");
+                            newAngle = (newAngle + 360);
+                        }
+                    } else {
+                        // turn clock wise
+                        newAngle = self.currentAngle + self.turnIteration;
+                        console.log("going CW");
+                        if (newAngle > 180) {
+                            console.log("angle past 180; flipping");
+                            newAngle = (newAngle - 360);
+                        }
+                    }
+
+                    self.currentAngle = newAngle;
+
+                    return;
+
+                    var a = angleToTarget - self.currentAngle;
+                    a = (a + 180) % 360 - 180;
+
+                    var what = Math.atan2(Math.sin(angleToTarget - self.currentAngle), Math.cos(angleToTarget - self.currentAngle))
+                    console.log("the thingy is " + what)
+                    what = what * (Math.PI / 180);
+
+                    console.log("the thingy is " + what)
+
+                }
+            }
+        };
+
+
+        var model = new worldModel();
+
+        var canvas = document.getElementById('canvas');
+        function drawLoop() {
+            if (canvas.getContext) {
+                var ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                model.draw(ctx);
+                setTimeout(function(){ drawLoop(); }, 50);
+            }
+        }
+
+    </script>
+</body>
+</html>
