@@ -35,6 +35,12 @@
 
         $(document).ready(function () {
             drawLoop();
+
+            document.getElementById('canvas').addEventListener('mousedown', function (e) {
+                var mouseCo = GetMouse(e);
+                console.log(mouseCo);
+                model.processClick(mouseCo);
+            }, true);
         });
 
         function randomIntFromInterval(min,max)
@@ -49,6 +55,16 @@
             theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
             //if (theta < 0) theta = 360 + theta; // range [0, 360)
             return theta;
+        }
+
+        //function mod(a, n) {
+        //    var result = a - Math.floor(a / n) * n;
+        //    return result;
+        //}
+        function getAngle(targetA, sourceA) {
+            var a = targetA - sourceA;
+            a += (a > 180) ? -360 : (a < -180) ? 360 : 0;
+            return a;
         }
 
         var worldModel = function() {
@@ -74,6 +90,11 @@
                 setTimeout(function () { self.move(); }, 100);
             }
             self.move();
+
+            self.processClick = function (e) {
+                // todo going to have to have the concept of a selected flyingObject at some point
+                self.flyingObjects[0].setTarget(e);
+            };
         };
 
         var flyingObjectModel = function(settings) {
@@ -103,10 +124,8 @@
             };
             self.drawMyTarget = function (ctx) {
                 ctx.save();
-
-                ctx.translate(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset);
-                ctx.rect(0, 0, self.targetSize, self.targetSize);
-                ctx.fill();
+                console.log("drawing target at " + (self.currentTarget.x - self.targetOffset) + "," + (self.currentTarget.y - self.targetOffset))
+                ctx.fillRect(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset, self.targetSize, self.targetSize);
 
                 ctx.restore();
             }
@@ -123,10 +142,10 @@
                 self.currentLocation.x = self.currentLocation.x + adjacent;
                 self.currentLocation.y = self.currentLocation.y + opposite;
             }
-            self.turn = function() {
+            self.turn = function () {
                 // workout the angle to our target
                 var angleToTarget = angle(self.currentLocation.x, self.currentLocation.y, self.currentTarget.x, self.currentTarget.y);
-                console.log("angle to target is " + angleToTarget + ", current angle is " + self.currentAngle);
+                //console.log("angle to target is " + angleToTarget + ", current angle is " + self.currentAngle);
                 // if the angle to the target is not the same as our current angle then adjust the current angle
                 if (angleToTarget != self.currentAngle) {
                     // angleToTarget ranges from -180 to 180. 0 is to the right, -90 is straight up, 90 is straight down.
@@ -138,43 +157,43 @@
                         return;
                     }
 
+                    //var myangle = getAngle(angleToTarget, self.currentAngle);
+                    //console.log("smallest angle is " + myangle);
+
                     // this needs to take into account the direction we are facing and the direction to the target
                     // todo, think about the direction we're facing
                     // todo UPDATE ME!
-                    if (angleToTarget < 0) {
+                    //if (angleToTarget < 0) {
+                    //if ((angleToTarget - self.currentAngle) > 180) {
+                    if (getAngle(angleToTarget, self.currentAngle) <= 0) {
                         // turn counter clock wise
                         newAngle = self.currentAngle - self.turnIteration;
-                        console.log("going CCW");
+                        //console.log("going CCW");
                         if (newAngle < -180) {
-                            console.log("angle past -180; flipping");
+                            //console.log("angle past -180; flipping");
                             newAngle = (newAngle + 360);
                         }
                     } else {
                         // turn clock wise
                         newAngle = self.currentAngle + self.turnIteration;
-                        console.log("going CW");
+                        //console.log("going CW");
                         if (newAngle > 180) {
-                            console.log("angle past 180; flipping");
+                            //console.log("angle past 180; flipping");
                             newAngle = (newAngle - 360);
                         }
                     }
 
                     self.currentAngle = newAngle;
 
-                    return;
-
-                    var a = angleToTarget - self.currentAngle;
-                    a = (a + 180) % 360 - 180;
-
-                    var what = Math.atan2(Math.sin(angleToTarget - self.currentAngle), Math.cos(angleToTarget - self.currentAngle))
-                    console.log("the thingy is " + what)
-                    what = what * (Math.PI / 180);
-
-                    console.log("the thingy is " + what)
-
                 }
-            }
+            };
+
+            self.setTarget = function (e) {
+                console.log("setting target as " + e.x + "," + e.y);
+                self.currentTarget = { x: e.x, y: e.y };
+            };
         };
+
 
 
         var model = new worldModel();
@@ -187,6 +206,30 @@
                 model.draw(ctx);
                 setTimeout(function(){ drawLoop(); }, 50);
             }
+        }
+
+
+        function GetMouse(e) {
+            var element = document.getElementById('canvas'), offsetX = 0, offsetY = 0, mx, my;
+
+            // Compute the total offset
+            if (element.offsetParent !== undefined) {
+                do {
+                    offsetX += element.offsetLeft;
+                    offsetY += element.offsetTop;
+                } while ((element = element.offsetParent));
+            }
+
+            // Add padding and border style widths to offset
+            // Also add the offsets in case there's a position:fixed bar
+            //offsetX += self.stylePaddingLeft + self.styleBorderLeft + self.htmlLeft;
+            //offsetY += self.stylePaddingTop + self.styleBorderTop + self.htmlTop;
+
+            mx = e.pageX - offsetX;
+            my = e.pageY - offsetY;
+
+            // We return a simple javascript object (a hash) with x and y defined
+            return { x: mx, y: my };
         }
 
     </script>
