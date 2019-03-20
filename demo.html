@@ -146,11 +146,9 @@
                         clickedObject.selected = true;
                     } else {
                         // they have clicked a flying object that isn't theirs
-                        console.log("setting target lock!")
                         var selected = self.getSelectedFlyingObject();
                         if (selected) {
                             selected.setTargetLock(clickedObject);
-                        console.log("target lock set!")
                         }
                     }
                 } else {
@@ -262,7 +260,6 @@
             }
             self.getCurrentTarget = function() {
                 if(self.targetLock) {
-                    console.log("target is target lock!")
                     return self.targetLock.currentLocation;
                 }
                 return self.currentTarget;
