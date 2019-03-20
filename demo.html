@@ -73,13 +73,15 @@
             self.flyingObjects.push(new flyingObjectModel({
                 currentTarget: { x: 100, y: 100 },
                 currentLocation: { x: 200, y: 200 },
-                imageSource: 'arrow1.png',
+                imageSource: 'images/plane1-fb.png',
                 name: "object 1"
             }));
             self.flyingObjects.push(new flyingObjectModel({
                 currentTarget: { x: 150, y: 100 },
                 currentLocation: { x: 250, y: 200 },
-                imageSource: 'arrow1.png',
+                speed: 25,
+                turnIteration: 8,
+                imageSource: 'images/plane2-f.png',
                 name: "object 2"
             }));
 
@@ -173,8 +175,8 @@
             self.targetSize = 4;
             self.radius = 10;
             self.currentAngle = 0;
-            self.currentSpeed = 20;
-            self.turnIteration = 5;
+            self.currentSpeed = settings.speed || 20;
+            self.turnIteration = settings.turnIteration || 5;
             self.currentTarget = { x : settings.currentTarget.x, y : settings.currentTarget.y };
             self.currentLocation = { x : settings.currentLocation.x, y : settings.currentLocation.y };
             self.image = new Image();
@@ -182,6 +184,9 @@
             self.selected = false;
 
             self.draw = function(ctx) {
+                
+                self.drawMyTarget(ctx);
+
                 ctx.save();
                 ctx.translate(self.currentLocation.x, self.currentLocation.y);
                 ctx.rotate(self.currentAngle * Math.PI / 180);
@@ -192,22 +197,24 @@
                     // draw an indicator that this is the selected object
                     ctx.save();
                     ctx.beginPath();
+                    ctx.strokeStyle = '#d0d0d0';
                     ctx.arc(self.currentLocation.x, self.currentLocation.y, self.radius, 0, 360, false)
                     ctx.stroke();
                     ctx.restore();
                 }
 
-                self.drawMyTarget(ctx);
             };
             self.drawMyTarget = function (ctx) {
                 // draw the target for this flying object as a square on the screen
                 ctx.save();
+                ctx.fillStyle = '#d0d0d0';
                 ctx.fillRect(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset, self.targetSize, self.targetSize);
                 ctx.restore();
 
                 // draw a line to the target
                 ctx.save();
                 ctx.beginPath();
+                ctx.strokeStyle = '#d0d0d0';
                 ctx.moveTo(self.currentLocation.x, self.currentLocation.y);
                 ctx.lineTo(self.currentTarget.x, self.currentTarget.y);
                 ctx.stroke();
