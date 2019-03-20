@@ -74,7 +74,8 @@
                 currentTarget: { x: 100, y: 100 },
                 currentLocation: { x: 200, y: 200 },
                 imageSource: 'images/plane1-fb.png',
-                name: "object 1"
+                name: "object 1",
+                selectable: true
             }));
             self.flyingObjects.push(new flyingObjectModel({
                 currentTarget: { x: 150, y: 100 },
@@ -82,7 +83,17 @@
                 speed: 25,
                 turnIteration: 8,
                 imageSource: 'images/plane2-f.png',
-                name: "object 2"
+                name: "object 2",
+                selectable: true
+            }));
+            self.flyingObjects.push(new flyingObjectModel({
+                currentTarget: { x: 250, y: 250 },
+                targetLock: self.flyingObjects[1],
+                currentLocation: { x: 50, y: 350 },
+                speed: 23,
+                turnIteration: 8,
+                imageSource: 'images/plane3-f.png',
+                name: "object 3"
             }));
 
             // draw loop, calls draw method on children objects
@@ -129,8 +140,19 @@
                 var clickedObject = self.getFlyingObjectFromClick(e);
 
                 if (clickedObject) {
-                    self.clearSelectedFlyingObject();
-                    clickedObject.selected = true;
+                    if(clickedObject.selectable) {
+                        // they are trying to select one of their flying objects
+                        self.clearSelectedFlyingObject();
+                        clickedObject.selected = true;
+                    } else {
+                        // they have clicked a flying object that isn't theirs
+                        console.log("setting target lock!")
+                        var selected = self.getSelectedFlyingObject();
+                        if (selected) {
+                            selected.setTargetLock(clickedObject);
+                        console.log("target lock set!")
+                        }
+                    }
                 } else {
                     // if they didn't just click on a flying object then try to set the click as the target for the existing selected
                     var selected = self.getSelectedFlyingObject();
@@ -177,16 +199,19 @@
             self.currentAngle = 0;
             self.currentSpeed = settings.speed || 20;
             self.turnIteration = settings.turnIteration || 5;
-            self.currentTarget = { x : settings.currentTarget.x, y : settings.currentTarget.y };
-            self.currentLocation = { x : settings.currentLocation.x, y : settings.currentLocation.y };
+            self.currentTarget = settings.currentTarget; //{ x : settings.currentTarget.x, y : settings.currentTarget.y };
+            self.targetLock = settings.targetLock || null;
+            self.currentLocation = settings.currentLocation; //{ x : settings.currentLocation.x, y : settings.currentLocation.y };
             self.image = new Image();
             self.image.src = settings.imageSource;
             self.selected = false;
+            self.selectable = settings.selectable || false;
 
             self.draw = function(ctx) {
-                
-                self.drawMyTarget(ctx);
-
+                // only show the targets of the flying objects owned by the player
+                if(self.selectable) {
+                    self.drawMyTarget(ctx);
+                }
                 ctx.save();
                 ctx.translate(self.currentLocation.x, self.currentLocation.y);
                 ctx.rotate(self.currentAngle * Math.PI / 180);
@@ -206,9 +231,11 @@
             };
             self.drawMyTarget = function (ctx) {
                 // draw the target for this flying object as a square on the screen
+                var theTarget = self.getCurrentTarget();
+
                 ctx.save();
                 ctx.fillStyle = '#d0d0d0';
-                ctx.fillRect(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset, self.targetSize, self.targetSize);
+                ctx.fillRect(theTarget.x - self.targetOffset, theTarget.y - self.targetOffset, self.targetSize, self.targetSize);
                 ctx.restore();
 
                 // draw a line to the target
@@ -216,7 +243,7 @@
                 ctx.beginPath();
                 ctx.strokeStyle = '#d0d0d0';
                 ctx.moveTo(self.currentLocation.x, self.currentLocation.y);
-                ctx.lineTo(self.currentTarget.x, self.currentTarget.y);
+                ctx.lineTo(theTarget.x, theTarget.y);
                 ctx.stroke();
                 ctx.restore();
             }
@@ -233,9 +260,18 @@
                 self.currentLocation.x = self.currentLocation.x + adjacent;
                 self.currentLocation.y = self.currentLocation.y + opposite;
             }
+            self.getCurrentTarget = function() {
+                if(self.targetLock) {
+                    console.log("target is target lock!")
+                    return self.targetLock.currentLocation;
+                }
+                return self.currentTarget;
+            }
             self.turn = function () {
                 // workout the angle to our target
-                var angleToTarget = angle(self.currentLocation.x, self.currentLocation.y, self.currentTarget.x, self.currentTarget.y);
+                var theTarget = self.getCurrentTarget();
+                var angleToTarget = angle(self.currentLocation.x, self.currentLocation.y, theTarget.x, theTarget.y);
+
                 //console.log("angle to target is " + angleToTarget + ", current angle is " + self.currentAngle);
                 // if the angle to the target is not the same as our current angle then adjust the current angle
                 if (angleToTarget != self.currentAngle) {
@@ -281,8 +317,13 @@
             }
             // sets the current target of this object based on the passed in click {x,y}
             self.setTarget = function (e) {
+                self.targetLock = null;
                 self.currentTarget = { x: e.x, y: e.y };
             };
+            // set the target to another flying object
+            self.setTargetLock = function(targetOject) {
+                self.targetLock = targetOject;
+            }
         };
 
 
