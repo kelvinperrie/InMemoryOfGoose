@@ -92,9 +92,39 @@
             self.move();
 
             self.processClick = function (e) {
-                // todo going to have to have the concept of a selected flyingObject at some point
-                self.flyingObjects[0].setTarget(e);
+
+                var clickedObject = self.getFlyingObjectFromClick(e);
+
+                if (clickedObject) {
+                    clickedObject.selected = true;
+                } else {
+                    // if they didn't just click on a flying object then try to set the click as the target for the existing selected
+                    var selected = self.getSelectedFlyingObject();
+                    if (selected) {
+                        self.flyingObjects[0].setTarget(e);
+                    }
+                }
+
             };
+
+            // see if there are any flying objects where the user has clicked
+            self.getFlyingObjectFromClick = function (e) {
+                for (var i = 0; i < self.flyingObjects.length; i++) {
+                    if (self.flyingObjects[i].isClickedOn(e)) {
+                        return self.flyingObjects[i];
+                    }
+                }
+            }
+
+            // get the currently selected flying object
+            self.getSelectedFlyingObject = function () {
+                for (var i = 0; i < self.flyingObjects.length; i++) {
+                    if (self.flyingObjects[i].selected) {
+                        return self.flyingObjects[i];
+                    }
+                }
+                return null;
+            }
         };
 
         var flyingObjectModel = function(settings) {
@@ -109,6 +139,7 @@
             self.currentLocation = { x : settings.currentLocation.x, y : settings.currentLocation.y };
             self.image = new Image();
             self.image.src = settings.imageSource;
+            self.selected = false;
 
             self.draw = function(ctx) {
                 ctx.save();
@@ -124,9 +155,15 @@
             };
             self.drawMyTarget = function (ctx) {
                 ctx.save();
-                console.log("drawing target at " + (self.currentTarget.x - self.targetOffset) + "," + (self.currentTarget.y - self.targetOffset))
+                //console.log("drawing target at " + (self.currentTarget.x - self.targetOffset) + "," + (self.currentTarget.y - self.targetOffset))
                 ctx.fillRect(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset, self.targetSize, self.targetSize);
+                ctx.restore();
 
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(self.currentLocation.x, self.currentLocation.y);
+                ctx.lineTo(self.currentTarget.x, self.currentTarget.y);
+                ctx.stroke();
                 ctx.restore();
             }
             self.move = function() {
@@ -156,15 +193,8 @@
                         self.currentAngle = angleToTarget;
                         return;
                     }
-
-                    //var myangle = getAngle(angleToTarget, self.currentAngle);
-                    //console.log("smallest angle is " + myangle);
-
+                    
                     // this needs to take into account the direction we are facing and the direction to the target
-                    // todo, think about the direction we're facing
-                    // todo UPDATE ME!
-                    //if (angleToTarget < 0) {
-                    //if ((angleToTarget - self.currentAngle) > 180) {
                     if (getAngle(angleToTarget, self.currentAngle) <= 0) {
                         // turn counter clock wise
                         newAngle = self.currentAngle - self.turnIteration;
@@ -187,7 +217,14 @@
 
                 }
             };
-
+            self.isClickedOn = function (e) {
+                var isClicked = false;
+                if (Math.abs(e.x - self.currentLocation.x) <= self.radius && Math.abs(e.y - self.currentLocation.y) <= self.radius) {
+                    isClicked = true;
+                }
+                console.log("checking click at " + e.x + "," + e.y + " is on us at " + self.currentLocation.x + "," + self.currentLocation.y + "; result is " + isClicked)
+                return isClicked;
+            }
             self.setTarget = function (e) {
                 console.log("setting target as " + e.x + "," + e.y);
                 self.currentTarget = { x: e.x, y: e.y };
