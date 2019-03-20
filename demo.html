@@ -29,7 +29,7 @@
     <script type="text/javascript">
         $(function(){
             $('html').keydown(function(e){
-                //model.processInput(e.which);
+                model.processKey(e.which);
             });
         });
 
@@ -57,10 +57,6 @@
             return theta;
         }
 
-        //function mod(a, n) {
-        //    var result = a - Math.floor(a / n) * n;
-        //    return result;
-        //}
         function getAngle(targetA, sourceA) {
             var a = targetA - sourceA;
             a += (a > 180) ? -360 : (a < -180) ? 360 : 0;
@@ -70,38 +66,74 @@
         var worldModel = function() {
             var self = this;
             self.flyingObjects = [];
+            self.runStatus = 'running';
+            self.pauseKeyCode = 32;
 
+            // setup a couple of examples
             self.flyingObjects.push(new flyingObjectModel({
-                currentTarget : { x : 100, y : 100 },
+                currentTarget: { x: 100, y: 100 },
                 currentLocation: { x: 200, y: 200 },
-                imageSource : 'arrow1.png'
+                imageSource: 'arrow1.png',
+                name: "object 1"
+            }));
+            self.flyingObjects.push(new flyingObjectModel({
+                currentTarget: { x: 150, y: 100 },
+                currentLocation: { x: 250, y: 200 },
+                imageSource: 'arrow1.png',
+                name: "object 2"
             }));
 
+            // draw loop, calls draw method on children objects
             self.draw = function(ctx) {
                 for(var i=0;i< self.flyingObjects.length;i++) {
                     self.flyingObjects[i].draw(ctx);
                 }
             };
 
-            self.move = function() {
-                for(var i=0;i< self.flyingObjects.length;i++) {
-                    self.flyingObjects[i].move();
+            self.move = function () {
+                if (self.runStatus === 'running') {
+                    for (var i = 0; i < self.flyingObjects.length; i++) {
+                        self.flyingObjects[i].move();
+                    }
                 }
                 setTimeout(function () { self.move(); }, 100);
             }
             self.move();
 
+            // change the runStatus of the model
+            self.togglePause = function () {
+                console.log(self.runStatus);
+                console.log(self.runStatus === 'running');
+                if (self.runStatus === 'running') {
+                    console.log('setting to paused')
+                    self.runStatus = 'paused'
+                } else {
+                    console.log('setting to running')
+                    self.runStatus = 'running'
+                }
+                console.log(self.runStatus);
+            };
+
+            // process key presses
+            self.processKey = function (e) {
+                if (e === self.pauseKeyCode) {
+                    self.togglePause();
+                }
+            }
+
+            // process mouse clicks
             self.processClick = function (e) {
 
                 var clickedObject = self.getFlyingObjectFromClick(e);
 
                 if (clickedObject) {
+                    self.clearSelectedFlyingObject();
                     clickedObject.selected = true;
                 } else {
                     // if they didn't just click on a flying object then try to set the click as the target for the existing selected
                     var selected = self.getSelectedFlyingObject();
                     if (selected) {
-                        self.flyingObjects[0].setTarget(e);
+                        selected.setTarget(e);
                     }
                 }
 
@@ -116,10 +148,18 @@
                 }
             }
 
+            // if a flying object is selected then clear it (make it no longer selected)
+            self.clearSelectedFlyingObject = function () {
+                var selected = self.getSelectedFlyingObject();
+                if (selected) {
+                    selected.selected = false;
+                }
+            }
+
             // get the currently selected flying object
             self.getSelectedFlyingObject = function () {
                 for (var i = 0; i < self.flyingObjects.length; i++) {
-                    if (self.flyingObjects[i].selected) {
+                    if (self.flyingObjects[i].selected=== true) {
                         return self.flyingObjects[i];
                     }
                 }
@@ -143,22 +183,29 @@
 
             self.draw = function(ctx) {
                 ctx.save();
-                // todo rotate as appropriate
-                //ctx.drawImage(self.image, self.currentLocation.x, self.currentLocation.y);
-
                 ctx.translate(self.currentLocation.x, self.currentLocation.y);
                 ctx.rotate(self.currentAngle * Math.PI / 180);
                 ctx.drawImage(self.image,-1*self.radius,-1*self.radius);
-
                 ctx.restore();
+
+                if (self.selected) {
+                    // draw an indicator that this is the selected object
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(self.currentLocation.x, self.currentLocation.y, self.radius, 0, 360, false)
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
                 self.drawMyTarget(ctx);
             };
             self.drawMyTarget = function (ctx) {
+                // draw the target for this flying object as a square on the screen
                 ctx.save();
-                //console.log("drawing target at " + (self.currentTarget.x - self.targetOffset) + "," + (self.currentTarget.y - self.targetOffset))
                 ctx.fillRect(self.currentTarget.x - self.targetOffset, self.currentTarget.y - self.targetOffset, self.targetSize, self.targetSize);
                 ctx.restore();
 
+                // draw a line to the target
                 ctx.save();
                 ctx.beginPath();
                 ctx.moveTo(self.currentLocation.x, self.currentLocation.y);
@@ -217,16 +264,16 @@
 
                 }
             };
+            // checks to see if this object falls within the boundaries of the passed in click {x,y}
             self.isClickedOn = function (e) {
                 var isClicked = false;
                 if (Math.abs(e.x - self.currentLocation.x) <= self.radius && Math.abs(e.y - self.currentLocation.y) <= self.radius) {
                     isClicked = true;
                 }
-                console.log("checking click at " + e.x + "," + e.y + " is on us at " + self.currentLocation.x + "," + self.currentLocation.y + "; result is " + isClicked)
                 return isClicked;
             }
+            // sets the current target of this object based on the passed in click {x,y}
             self.setTarget = function (e) {
-                console.log("setting target as " + e.x + "," + e.y);
                 self.currentTarget = { x: e.x, y: e.y };
             };
         };
